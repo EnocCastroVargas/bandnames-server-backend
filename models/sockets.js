@@ -1,3 +1,4 @@
+const BandList = require('./band-list');
 
 
 class Sockets {
@@ -5,6 +6,7 @@ class Sockets {
     constructor (io) {
 
         this.io = io;
+        this.bandList = new BandList();
 
         this.socketEvents(); 
     }
@@ -12,14 +14,35 @@ class Sockets {
     socketEvents () {
         // On connection
         this.io.on('connection', ( socket ) => {
-      
-            // Escuchar el evento: mensaje-to-server
-            socket.on('mensaje-to-server', ( data ) => { // El servidor escucha el  mensaje del cliente
-                console.log(data);
-                this.io.emit('mensaje-from-server', data ); // se manda un mensaje global a todos los namespaces
+            
+            console.log('Cliente conectado');
+
+            // Emitir al cliente conectado, todas las bandas actuales
+            socket.emit('current-bands', this.bandList.getBands() );
+
+            // Votar por la banda
+            socket.on('votar-banda', ( id ) => {
+                this.bandList.increaseVotes( id );
+                this.io.emit('current-bands', this.bandList.getBands() );
             });
 
+            // Borrar una banda
+            socket.on('borrar-banda', ( id ) => {
+                this.bandList.removeBand( id );
+                this.io.emit('current-bands', this.bandList.getBands() );
+            });
 
+            // Cambiar el nombre de una banda
+            socket.on('cambiar-nombre-banda', ({ id, nombre }) => {
+                this.bandList.changeBandName( id, nombre);
+                this.io.emit('current-bands', this.bandList.getBands() );
+            });
+
+            // Crear una nueva banda
+            socket.on('nueva-banda', ({ nombre }) => {
+                this.bandList.addBand( nombre );
+                this.io.emit('current-bands', this.bandList.getBands() );
+            });
             
         });
     }
